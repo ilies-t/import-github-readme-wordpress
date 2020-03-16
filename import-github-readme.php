@@ -16,7 +16,7 @@ Author URI: https://ilies.ch
 // load required file(s)
 require_once('_includes/class.problem.php');
 
-/*********************** begining ***********************/
+/*********************** beginning ***********************/
 
 /**
  * construct new Problem()

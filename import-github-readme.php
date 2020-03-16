@@ -31,67 +31,78 @@ function problem(string $type) : string {
  * @param args metas from wordpress shortcode
  */
 function get_readme(array $args) : string {
-    try {
-        // create an entire url with the `url` meta from shortcode
-        $url = 'https://github.com/' . $args['url'];
 
-        // get the HTML from $url and remove the anchors
-        $html_request = file_get_contents($url);
-        $html_request = preg_replace('#<svg class="octicon octicon-link">(.*?)</svg>#', '', $html_request);
+    // get the url given in shortcode
+    $url_given = $args['url'];
 
-        // if the link return nothing
-        if(empty($html_request)) {
-            return problem('bad_link');
-        } else {
-            try {
-                $content = new DOMDocument;
-                $content->loadHTML(mb_convert_encoding($html_request, 'HTML-ENTITIES', 'UTF-8'));
-                
-                // parse with xpath to get only `article.markdown-body`
-                $finder = new DOMXPath($content);
-                $all_elements = $finder->query("//article[contains(@class, 'markdown-body')]");
+    // verify if isn't empty
+    // usually, wordpress may display `Updating failed.`
+    if(empty($url_given)) {
+        return problem('missing_url');
 
-                foreach ($all_elements as $key => $value) {
-                    $content = $content->saveHTML($value);
-                }
-
-                // replace relative link by absolute link for `a` and `img` tags
-                $doc = new DOMDocument;
-                $doc->loadHTML(mb_convert_encoding($content, 'HTML-ENTITIES', 'UTF-8'));
-
-                $replacable = array(
-                    "a" => "href",
-                    "img" => "src"
-                );
-
-                foreach ($replacable as $key => $value) {
-
-                    foreach ($doc->getElementsByTagName($key) as $current_tag) {
-                        $relative_link = $current_tag->getAttribute($value);
-
-                        // check if this is a relative link
-                        // warning for `./` links
-                        if (strpos($relative_link, '/') === 0) {
-
-                            // replace relative link of absolute link
-                            $current_tag->setAttribute($value, 'https://github.com' . $relative_link);
-        
-                            // save modification
-                            $content = $doc->saveHTML();
-                        }
-                    };
-                }
-
-                return $content;
-
-            } catch(Exception $e) {
-                return problem('parse_error');
+    } else {
+        try {
+            // create an entire url with the `url` meta from shortcode
+            $url = 'https://github.com/' . $url_given;
+    
+            // get the HTML from $url and remove the anchors
+            $html_request = file_get_contents($url);
+            $html_request = preg_replace('#<svg class="octicon octicon-link">(.*?)</svg>#', '', $html_request);
+    
+            // if the link return nothing
+            if(empty($html_request)) {
+                return problem('bad_link');
+            } else {
+                try {
+                    $content = new DOMDocument;
+                    $content->loadHTML(mb_convert_encoding($html_request, 'HTML-ENTITIES', 'UTF-8'));
+                    
+                    // parse with xpath to get only `article.markdown-body`
+                    $finder = new DOMXPath($content);
+                    $all_elements = $finder->query("//article[contains(@class, 'markdown-body')]");
+    
+                    foreach ($all_elements as $key => $value) {
+                        $content = $content->saveHTML($value);
+                    }
+    
+                    // replace relative link by absolute link for `a` and `img` tags
+                    $doc = new DOMDocument;
+                    $doc->loadHTML(mb_convert_encoding($content, 'HTML-ENTITIES', 'UTF-8'));
+    
+                    $replacable = array(
+                        "a" => "href",
+                        "img" => "src"
+                    );
+    
+                    foreach ($replacable as $key => $value) {
+    
+                        foreach ($doc->getElementsByTagName($key) as $current_tag) {
+                            $relative_link = $current_tag->getAttribute($value);
+    
+                            // check if this is a relative link
+                            // warning for `./` links
+                            if (strpos($relative_link, '/') === 0) {
+    
+                                // replace relative link of absolute link
+                                $current_tag->setAttribute($value, 'https://github.com' . $relative_link);
+            
+                                // save modification
+                                $content = $doc->saveHTML();
+                            }
+                        };
+                    }
+    
+                    return $content;
+    
+                } catch(Exception $e) {
+                    return problem('parse_error');
+                };
             };
+    
+        } catch (Exception $e) {
+            return problem('unknow');
         };
-
-    } catch (Exception $e) {
-        return problem('unknow');
-    };
+    }
 }
 
 // register function to the `github-readme` shortcode
